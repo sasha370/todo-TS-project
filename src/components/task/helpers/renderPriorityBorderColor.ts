@@ -11,4 +11,4 @@ export const renderPriorityBorderColor = (priority: string): string => {
     default:
       return "grey.900";
   }
-}
+};

@@ -1,4 +1,10 @@
-import React, { FC, ReactElement, useState } from "react";
+import React, {
+  FC,
+  ReactElement,
+  useState,
+  useEffect,
+  useContext,
+} from "react";
 import {
   Box,
   Typography,
@@ -14,6 +20,10 @@ import { TaskDateField } from "./_taskDateField";
 import { TaskSelectField } from "./_taskSelectField";
 import { Status } from "./enums/Status";
 import { Priority } from "./enums/Priority";
+import { useMutation } from "@tanstack/react-query";
+import { sendApiRequest } from "../../helpers/sendApiRequest";
+import { ICreateTask } from "../taskArea/interfaces/ICreateTask";
+import { TaskStatusChangeContext } from "../../context";
 
 export const CreateTaskForm: FC = (): ReactElement => {
   // Declare state variables
@@ -22,6 +32,44 @@ export const CreateTaskForm: FC = (): ReactElement => {
   const [date, setDate] = useState<Date | null>(new Date());
   const [status, setStatus] = useState<string>(Status.todo);
   const [priority, setPriority] = useState<string>(Priority.normal);
+  const [showSuccessAlert, setShowSuccessAlert] = useState<boolean>(false);
+
+  // Declare mutation
+  const createTaskMutation = useMutation((data: ICreateTask) =>
+    sendApiRequest("http://localhost:3200/tasks", "POST", data)
+  );
+
+  // Declare context
+  const tasksUpdatedContext = useContext(TaskStatusChangeContext);
+
+  function createTaskHandler() {
+    if (!title || !description || !date) {
+      return;
+    }
+
+    const task: ICreateTask = {
+      title,
+      description,
+      date: date.toString(),
+      status,
+      priority,
+    };
+    createTaskMutation.mutate(task);
+  }
+
+  useEffect(() => {
+    if (createTaskMutation.isSuccess) {
+      setShowSuccessAlert(true);
+      tasksUpdatedContext.toggle();
+    }
+    const successTimeout = setTimeout(() => {
+      setShowSuccessAlert(false);
+    }, 5000);
+
+    return () => {
+      clearTimeout(successTimeout);
+    };
+  }, [createTaskMutation.isSuccess]);
 
   return (
     <Box
@@ -32,21 +80,32 @@ export const CreateTaskForm: FC = (): ReactElement => {
       px={4}
       my={6}
     >
-      <Alert severity="success" sx={{ width: "100%", marginBottom: "16px" }}>
-        <AlertTitle>Success</AlertTitle>
-        The task was created successfully
-      </Alert>
+      {showSuccessAlert && (
+        <Alert severity="success" sx={{ width: "100%", marginBottom: "16px" }}>
+          <AlertTitle>Success</AlertTitle>
+          The task was created successfully
+        </Alert>
+      )}
       <Typography mb={2} component="h2" variant="h6">
         Create a task
       </Typography>
       <Stack sx={{ width: "100%" }} spacing={2}>
-        <TaskTitleField onChange={(e) => setTitle(e.target.value)} />
+        <TaskTitleField
+          onChange={(e) => setTitle(e.target.value)}
+          disabled={createTaskMutation.isLoading}
+        />
         <TaskDescriptionField
           onChange={(e) => setDescription(e.target.value)}
+          disabled={createTaskMutation.isLoading}
         />
-        <TaskDateField value={date} onChange={(date) => setDate(date)} />
+        <TaskDateField
+          disabled={createTaskMutation.isLoading}
+          value={date}
+          onChange={(date) => setDate(date)}
+        />
         <Stack direction="row" sx={{ width: "100%" }} spacing={2}>
           <TaskSelectField
+            disabled={createTaskMutation.isLoading}
             label="Status"
             name="status"
             value={status}
@@ -60,6 +119,7 @@ export const CreateTaskForm: FC = (): ReactElement => {
             ]}
           />
           <TaskSelectField
+            disabled={createTaskMutation.isLoading}
             label="Priority"
             name="priority"
             value={priority}
@@ -72,8 +132,14 @@ export const CreateTaskForm: FC = (): ReactElement => {
             )}
           />
         </Stack>
-        <LinearProgress />
-        <Button variant="contained" size="large" fullWidth>
+        {createTaskMutation.isLoading && <LinearProgress />}
+        <Button
+          disabled={!title || !description || !date}
+          onClick={createTaskHandler}
+          variant="contained"
+          size="large"
+          fullWidth
+        >
           Create a task
         </Button>
       </Stack>

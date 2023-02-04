@@ -11,6 +11,7 @@ import { renderPriorityBorderColor } from "./helpers/renderPriorityBorderColor";
 
 export const Task: FC<ITask> = (props): ReactElement => {
   const {
+    id,
     title = "Defult Title",
     date = new Date(),
     description = "Defult Description",
@@ -37,12 +38,18 @@ export const Task: FC<ITask> = (props): ReactElement => {
     >
       <TaskHeader title={title} date={date} />
       <TaskDescription description={description} />
-      <TaskFooter onStatusChange={onStatusChange} onClick={onClick} />
+      <TaskFooter
+        id={id}
+        status={status}
+        onStatusChange={onStatusChange}
+        onClick={onClick}
+      />
     </Box>
   );
 };
 
 Task.propTypes = {
+  id: PropTypes.string.isRequired,
   title: PropTypes.string,
   date: PropTypes.instanceOf(Date),
   description: PropTypes.string,
